@@ -1,0 +1,80 @@
+from urllib.parse import urlencode
+
+import requests
+
+import json
+
+
+
+APP_ID = '7058341'
+AUTH_URL = 'https://oauth.vk.com/authorize'
+AUTH_DATA = {
+    'client_id': APP_ID,
+    'display': 'page',
+    'scope': 'friends',
+    'response_type': 'token'
+}
+
+TOKEN = 'e90d4a75a6d4873d88aeb6c81a263563361a1f29c87dc6f44274aa3c3f84e4149c04202715cdb513ffb4d'
+
+params = {
+    'access_token': TOKEN,
+    'v': '5.52'
+}
+
+
+class User:
+    def __init__(self, user_id):
+        self.user_id = user_id
+        self.first_name = None
+        self.last_name = None
+
+    def __call__(self):
+        self.params = params.copy()
+        self.params['user_id'] = self.user_id
+        self.params['fields'] = 'domain'
+        self.response_user = requests.get(
+            'https://api.vk.com/method/users.get',
+            params=self.params
+        )
+        self.response_user_details = json.loads(self.response_user.text)
+
+        # print(self.response_user_details)
+        return self.response_user_details
+
+    def __and__(self, other):
+        self.params = params.copy()
+        self.params['source_uid'] = self.user_id
+        self.params['target_uid'] = other.user_id
+        response_friends = requests.get(
+            'https://api.vk.com/method/friends.getMutual',
+            params=self.params
+        )
+
+        common_friend_list = json.loads(response_friends.text)
+
+        return common_friend_list['response']
+
+    def __str__(self):
+        self.first_name = self.response_user_details['response'][0]['first_name']
+        self.last_name = self.response_user_details['response'][0]['last_name']
+        self.domain = self.response_user_details['response'][0]['domain']
+        self.print_version = self.last_name + ' ' + self.first_name + '.  ' + 'https://vk.com/' + self.domain
+        return self.print_version
+
+
+
+id_1 = input('Введите id первого пользователя ')
+id_2 = input('Введите id второго пользователя ')
+
+user_1 = User(id_1)
+user_2 = User(id_2)
+
+
+common_friend_list = user_1 & user_2
+print('\nCписок общих друзей:\n')
+for item in common_friend_list:
+    friend = User(int(item))
+    friend()
+    print(friend)
+
